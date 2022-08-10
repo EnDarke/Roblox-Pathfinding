@@ -56,12 +56,6 @@ local function retracePath(startNode, endNode)
     gridClass.path = path
 end
 
-coroutine.wrap(function()
-    while task.wait(1) do
-        pathfindingClass:findPath(seeker.Position, target.Position)
-    end
-end)()
-
 function pathfindingClass:findPath(startPos, targetPos)
     local startNode = gridClass:nodeFromWorldPoint(startPos)
     local targetNode = gridClass:nodeFromWorldPoint(targetPos)

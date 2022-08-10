@@ -14,24 +14,12 @@ local utils = {}
 
 -- New Vector3 Keywords
 utils.Vector3 = {
-    up = function()
-        return Vector3.new(0, 1, 0)
-    end,
-    down = function()
-        return Vector3.new(0, -1, 0)
-    end,
-    left = function()
-        return Vector3.new(-1, 0, 0)
-    end,
-    right = function()
-        return Vector3.new(1, 0, 0)
-    end,
-    forward = function()
-        return Vector3.new(0, 0, 1)
-    end,
-    backward = function()
-        return Vector3.new(0, 0, -1)
-    end,
+    up = Vector3.new(0, 1, 0);
+    down = Vector3.new(0, -1, 0);
+    left = Vector3.new(-1, 0, 0);
+    right = Vector3.new(1, 0, 0);
+    forward = Vector3.new(0, 0, 1);
+    backward = Vector3.new(0, 0, -1);
 }
 
 return readOnly(utils)

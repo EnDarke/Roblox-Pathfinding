@@ -55,7 +55,7 @@ local function new2DArray(x, y)
     return array
 end
 
-local function drawGizmos(_pos, _size, _color)
+local function drawParts(_pos, _size, _color)
     local part = instance("Part")
     part.Size = _size
     part.Position = _pos
@@ -101,6 +101,7 @@ function gridClass:maxSize()
     return gridSizeX * gridSizeY
 end
 
+-- Creates the grid within a 2D Array using the Node class
 function gridClass:createGrid()
     grid = new2DArray(gridSizeX, gridSizeY)
     local worldBottomLeft = plane.Position + (vector3.left() * gridWorldSize.X / 2) + (vector3.backward() * gridWorldSize.Y / 2)
@@ -114,16 +115,9 @@ function gridClass:createGrid()
             grid[x][y] = nodeClass.new(walkable, worldPoint, x, y)
         end
     end
-
-    if displayGrid then
-        coroutine.wrap(function()
-            while task.wait(1) do
-                gridClass:onDrawGizmos()
-            end
-        end)()
-    end
 end
 
+-- Finds the neighboring grid pieces for the pathfinding module to use
 function gridClass:getNeighbors(node)
     local neighbors = {}
     for x = -1, 1, 1 do
@@ -143,6 +137,7 @@ function gridClass:getNeighbors(node)
     return neighbors
 end
 
+-- Finds the node that the position is based on
 function gridClass:nodeFromWorldPoint(worldPosition)
     local percentX = (worldPosition.X + gridWorldSize.X / 2) / gridWorldSize.X
     local percentY = (worldPosition.Z + gridWorldSize.Y / 2) / gridWorldSize.Y
@@ -155,14 +150,15 @@ function gridClass:nodeFromWorldPoint(worldPosition)
     return grid[x][y]
 end
 
-function gridClass:onDrawGizmos()
+-- Used to display the grid and path that is created
+function gridClass:onDrawParts()
     local path = self.path
     workspace.Grid:ClearAllChildren()
 
     if displayOnlyPath then
         if path then
             for _, node in ipairs(path) do
-                drawGizmos(node.worldPosition, Vector3.new(4, 1, 4), BrickColor.Black())
+                drawParts(node.worldPosition, Vector3.new(4, 1, 4), BrickColor.Black())
             end
         end
     else
@@ -171,12 +167,12 @@ function gridClass:onDrawGizmos()
                 for _, node in ipairs(yAxis) do
                     if path then
                         if table.find(path, node) then
-                            drawGizmos(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.Black() or BrickColor.Red())
+                            drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.Black() or BrickColor.Red())
                         else
-                            drawGizmos(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
+                            drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
                         end
                     else
-                        drawGizmos(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
+                        drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
                     end
                 end
             end

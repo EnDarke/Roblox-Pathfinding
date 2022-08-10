@@ -32,13 +32,6 @@ function Node:fCost()
     return self.gCost + self.hCost
 end
 
-function Node:heapIndex(set)
-    if set then
-        heapIndex = set
-    end
-    return heapIndex
-end
-
 function Node:compareTo(nodeToCompare)
     local compare = self:fCost() == nodeToCompare.fCost and true or false
     if compare then

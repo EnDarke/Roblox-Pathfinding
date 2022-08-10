@@ -1,3 +1,4 @@
+-- This code may be messy as it was used for testing purposes
 local replicatedStorage = game:GetService("ReplicatedStorage")
 local collectionService = game:GetService("CollectionService")
 
