@@ -7,6 +7,13 @@ local parent = script.Parent
 local gridClass = require(parent:WaitForChild("Grid"))
 local heapClass = require(parent:WaitForChild("Heap"))
 
+--\\ Types //--
+type GridObject = {GridObject}
+type NodeObject = {NodeObject}
+
+type HeapList = {[any]: any}
+type PathList = {[any]: any}
+
 --\\ Variables //--
 local seeker = workspace.seeker
 local target = workspace.target
@@ -24,7 +31,7 @@ end
 
 local function reverse(t: table)
     for i = 1, math.floor(#t / 2) do
-        local j = #t - i + 1
+        local j: number = #t - i + 1
         t[i], t[j] = t[j], t[i]
     end
     return t
@@ -32,10 +39,19 @@ end
 
 --\\ Module Code //--
 local pathfindingClass = {}
+pathfindingClass.__index = pathfindingClass
 
-local function getDistance(nodeA, nodeB)
-    local dstX = abs(nodeA.gridX - nodeB.gridX)
-    local dstY = abs(nodeA.gridY - nodeB.gridY)
+function pathfindingClass.new(grid: GridObject)
+    local self = setmetatable({}, pathfindingClass)
+
+    self.grid = grid
+
+    return self
+end
+
+local function getDistance(nodeA: NodeObject, nodeB: NodeObject)
+    local dstX: number = abs(nodeA.gridX - nodeB.gridX)
+    local dstY: number = abs(nodeA.gridY - nodeB.gridY)
 
     if (dstX > dstY) then
         return 14 * dstY + 10 * (dstX - dstY)
@@ -43,9 +59,9 @@ local function getDistance(nodeA, nodeB)
     return 14 * dstX + 10 * (dstY - dstX)
 end
 
-local function retracePath(startNode, endNode)
-    local path = {}
-    local currentNode = endNode
+function pathfindingClass:retracePath(startNode: NodeObject, endNode: NodeObject)
+    local path: PathList = {}
+    local currentNode: NodeObject = endNode
 
     while currentNode ~= startNode do
         table.insert(path, currentNode)
@@ -53,35 +69,35 @@ local function retracePath(startNode, endNode)
     end
     reverse(path)
 
-    gridClass.path = path
+    self.grid.path = path
 end
 
-function pathfindingClass:findPath(startPos, targetPos)
-    local startNode = gridClass:nodeFromWorldPoint(startPos)
-    local targetNode = gridClass:nodeFromWorldPoint(targetPos)
+function pathfindingClass:findPath(startPos: Vector3, targetPos: Vector3)
+    local startNode: NodeObject = self.grid:nodeFromWorldPoint(startPos)
+    local targetNode: NodeObject = self.grid:nodeFromWorldPoint(targetPos)
 
-    local timeNow = tick()%1
+    local timeNow: number = tick()%1
 
-    local openSet = heapClass.new(comparator)
-    local closedSet = {}
+    local openSet: HeapList = heapClass.new(comparator)
+    local closedSet: PathList = {}
     openSet:add(startNode)
 
     coroutine.wrap(function()
         while #openSet > 0 do
-            local currentNode = openSet:remove()
+            local currentNode: NodeObject = openSet:remove()
             table.insert(closedSet, currentNode)
 
             if currentNode == targetNode then
-                retracePath(startNode, targetNode)
+                self:retracePath(startNode, targetNode)
                 return
             end
 
-            for _, neighbor in ipairs(gridClass:getNeighbors(currentNode)) do
+            for _, neighbor in ipairs(self.grid:getNeighbors(currentNode)) do
                 if not neighbor.walkable or table.find(closedSet, neighbor) then
                     continue
                 end
 
-                local newMovementCostToNeighbor = currentNode.gCost + getDistance(currentNode, neighbor)
+                local newMovementCostToNeighbor: number = currentNode.gCost + getDistance(currentNode, neighbor)
                 if newMovementCostToNeighbor < neighbor.gCost or not table.find(openSet, neighbor) then
                     neighbor.gCost = newMovementCostToNeighbor
                     neighbor.hCost = getDistance(neighbor, targetNode)
@@ -95,7 +111,7 @@ function pathfindingClass:findPath(startPos, targetPos)
         end
     end)()
 
-    print(math.round(((tick()%1) - timeNow) * 1000).."ms")
+    openSet:Destroy()
 end
 
 return pathfindingClass

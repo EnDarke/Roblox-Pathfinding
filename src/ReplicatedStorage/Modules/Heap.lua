@@ -4,6 +4,9 @@
 -- Author: Alex/EnDarke
 -- Date: 07/26/22
 
+--\\ Types //--
+type HeapList = {[any]: any}
+
 --\\ Variables //--
 local floor = math.floor
 
@@ -44,10 +47,10 @@ local function sortDown(t: table, index: number)
 end
 
 --\\ Module Code //--
-local sort = {}
+local sort: {} = {}
 sort.__index = sort
 
-local function compare(a: any, b: any)
+local function compare(a: any, b: any): boolean
     if a > b then
         return true
     else
@@ -55,7 +58,7 @@ local function compare(a: any, b: any)
     end
 end
 
-function sort.new(compareFunc: RBXScriptConnection)
+function sort.new(compareFunc: RBXScriptConnection): HeapList
     local self = setmetatable({}, sort)
     if compareFunc then
         self.Compare = compareFunc
@@ -73,7 +76,7 @@ function sort:add(item: any)
     sortUp(self, #self)
 end
 
-function sort:remove()
+function sort:remove(): any
     if #self > 0 then
         local currentItem = self[1]
         self[1] = self[#self]
@@ -87,7 +90,7 @@ function sort:remove()
     end
 end
 
-function sort:currenTop()
+function sort:currenTop(): any
     if #self > 0 then
         return self[1]
     end
@@ -99,7 +102,7 @@ function sort:clear()
     end
 end
 
-function sort:clone()
+function sort:clone(): HeapList
     local newSort = sort.new(self.Compare)
     for i = 1, #self do
         table.insert(newSort, self[i])

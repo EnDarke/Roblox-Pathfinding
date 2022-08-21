@@ -4,72 +4,64 @@
 -- Author: Alex/EnDarke
 -- Date: 07/24/22
 
-local parent = script.Parent
+local parent: Instance = script.Parent
 
 --\\ Services //--
-local collectionService = game:GetService("CollectionService")
+local collectionService: CollectionService = game:GetService("CollectionService")
 
 --\\ Modules //--
-local gameSettings = require(parent:WaitForChild("GameSettings"))
-local utils = require(parent:WaitForChild("Utils"))
+local gameSettings: {} = require(parent:WaitForChild("GameSettings"))
+local utils: {} = require(parent:WaitForChild("Utils"))
+
+--\\ Types //--
+type GridObject = {GridObject}
+type NodeObject = {NodeObject}
+
+type NodeList = {[any]: any}
+type Array2D = {
+    X: {Y: {[any]: any}}
+}
 
 --\\ Classes //--
-local nodeClass = require(parent:WaitForChild("Node"))
+local nodeClass: {} = require(parent:WaitForChild("Node"))
 
 --\\ Settings //--
-local gridSettings = gameSettings.Grid
+local gridSettings: {} = gameSettings.Grid
 
 --\\ Variables //--
-local displayGrid = gridSettings.DisplayGrid
-local displayOnlyPath = gridSettings.DisplayOnlyPath
-local gridWorldSize = gridSettings.GridWorldSize
-local nodeRadius = gridSettings.NodeRadius
-local grid = {}
+local nodeRadius: number = gridSettings.NodeRadius
 
-local nodeDiameter
-local gridSizeX, gridSizeY
-local plane
+local round: (num: number) -> (number) = math.round
+local clamp: (num: number, min: number, max: number) -> (number) = math.clamp
+local ceil: (num: number) -> (number) = math.ceil
 
-local round = math.round
-local clamp = math.clamp
-local ceil = math.ceil
-
-local instance = Instance.new
-local overlapParams = OverlapParams.new
+local instance: () -> (Instance) = Instance.new
+local overlapParams: () -> (OverlapParams) = OverlapParams.new
 
 local params = overlapParams()
 params.FilterType = Enum.RaycastFilterType.Whitelist
 
 --\\ Util Tools //--
-local vector3 = utils.Vector3
+local vector3: {} = utils.Vector3
 
 --\\ Local Utility Functions //--
-local function new2DArray(x, y)
-    local array = {}
-    for x = 1, x do
+local function new2DArray(xCount, yCount): Array2D
+    local array: Array2D = {}
+    for x = 1, xCount do
         array[x] = {}
-        for y = 1, y do
+        for y = 1, yCount do
             array[x][y] = 0
         end
     end
     return array
 end
 
-local function drawParts(_pos, _size, _color)
-    local part = instance("Part")
-    part.Size = _size
-    part.Position = _pos
-    part.Anchored = true
-    part.BrickColor = _color
-    part.Parent = workspace.Grid
-end
-
-local function roundToWholeOrOne(num)
+local function roundToWholeOrOne(num: number, gridMax: number): number
     num = ceil(num)
     if num <= 0 then
         num = 1
-    elseif num >= gridSizeX + 1 then
-        num = gridSizeX
+    elseif num >= gridMax + 1 then
+        num = gridMax
     end
     return num
 end
@@ -78,59 +70,54 @@ end
 local gridClass = {}
 gridClass.__index = gridClass
 
-function gridClass.new(model: Part)
+function gridClass.new(model: Part, gridWorldSize: Vector3): GridObject
     local self = setmetatable({}, gridClass)
 
-    local timeNow = tick()%1
-
     self.Model = model
-    plane = model
+    self.plane = model
 
-    nodeDiameter = nodeRadius * 2
-    gridSizeX = round(gridWorldSize.X / nodeDiameter)
-    gridSizeY = round(gridWorldSize.Y / nodeDiameter)
+    self.nodeDiameter = nodeRadius * 2
+    self.gridWorldSize = gridWorldSize
+    self.gridSizeX = round(self.gridWorldSize.X / self.nodeDiameter)
+    self.gridSizeY = round(self.gridWorldSize.Y / self.nodeDiameter)
 
-    gridClass:createGrid()
-
-    print(round(((tick()%1) - timeNow) * 1000).."ms")
+    self.grid = self:createGrid()
 
     return self
 end
 
-function gridClass:maxSize()
-    return gridSizeX * gridSizeY
-end
-
 -- Creates the grid within a 2D Array using the Node class
-function gridClass:createGrid()
-    grid = new2DArray(gridSizeX, gridSizeY)
-    local worldBottomLeft = plane.Position + (vector3.left() * gridWorldSize.X / 2) + (vector3.backward() * gridWorldSize.Y / 2)
+function gridClass:createGrid(): Array2D
+    local newGrid: Array2D = new2DArray(self.gridSizeX, self.gridSizeY)
+    local worldBottomLeft: Vector3 = self.plane.Position + (vector3.left() * self.gridWorldSize.X / 2) + (vector3.backward() * self.gridWorldSize.Y / 2)
 
-    params.FilterDescendantsInstances = collectionService:GetTagged("PlacedObject")
+    params.FilterDescendantsInstances = collectionService:GetTagged("Obstacle")
 
-    for x = 1, gridSizeX, 1 do
-        for y = 1, gridSizeY, 1 do
-            local worldPoint = Vector3.one * worldBottomLeft + vector3.right() * ((x - 1) * nodeDiameter + nodeRadius) + vector3.forward() * ((y - 1) * nodeDiameter + nodeRadius)
-            local walkable = not workspace:GetPartBoundsInRadius(worldPoint, nodeRadius, params)[1] and true or false
-            grid[x][y] = nodeClass.new(walkable, worldPoint, x, y)
+    for x = 1, self.gridSizeX, 1 do
+        for y = 1, self.gridSizeY, 1 do
+            local worldPoint: Vector3 = Vector3.one * worldBottomLeft + vector3.right() * ((x - 1) * self.nodeDiameter + nodeRadius) + vector3.forward() * ((y - 1) * self.nodeDiameter + nodeRadius)
+            local walkable: boolean = not workspace:GetPartBoundsInRadius(worldPoint, nodeRadius, params)[1] and true or false
+            newGrid[x][y] = nodeClass.new(walkable, worldPoint, x, y)
         end
     end
+
+    return newGrid
 end
 
 -- Finds the neighboring grid pieces for the pathfinding module to use
-function gridClass:getNeighbors(node)
-    local neighbors = {}
+function gridClass:getNeighbors(node): NodeList
+    local neighbors: NodeList = {}
     for x = -1, 1, 1 do
         for y = -1, 1, 1 do
             if (x == 0 and y == 0) then
                 continue
             end
 
-            local checkX = node.gridX + x
-            local checkY = node.gridY + y
+            local checkX: number = node.gridX + x
+            local checkY: number = node.gridY + y
 
-            if checkX >= 1 and checkX <= gridSizeX and checkY >= 1 and checkY <= gridSizeY then
-                table.insert(neighbors, grid[checkX][checkY])
+            if checkX >= 1 and checkX <= self.gridSizeX and checkY >= 1 and checkY <= self.gridSizeY then
+                table.insert(neighbors, self.grid[checkX][checkY])
             end
         end
     end
@@ -138,46 +125,16 @@ function gridClass:getNeighbors(node)
 end
 
 -- Finds the node that the position is based on
-function gridClass:nodeFromWorldPoint(worldPosition)
-    local percentX = (worldPosition.X + gridWorldSize.X / 2) / gridWorldSize.X
-    local percentY = (worldPosition.Z + gridWorldSize.Y / 2) / gridWorldSize.Y
+function gridClass:nodeFromWorldPoint(worldPosition): NodeObject
+    local percentX: number = (worldPosition.X + self.gridWorldSize.X / 2) / self.gridWorldSize.X
+    local percentY: number = (worldPosition.Z + self.gridWorldSize.Y / 2) / self.gridWorldSize.Y
     percentX = clamp(percentX, 0, 1)
     percentY = clamp(percentY, 0, 1)
 
-    local x = roundToWholeOrOne((gridSizeX) * percentX)
-    local y = roundToWholeOrOne((gridSizeY) * percentY)
+    local x: number = roundToWholeOrOne((self.gridSizeX) * percentX, self.gridSizeX)
+    local y: number = roundToWholeOrOne((self.gridSizeY) * percentY, self.gridSizeY)
 
-    return grid[x][y]
-end
-
--- Used to display the grid and path that is created
-function gridClass:onDrawParts()
-    local path = self.path
-    workspace.Grid:ClearAllChildren()
-
-    if displayOnlyPath then
-        if path then
-            for _, node in ipairs(path) do
-                drawParts(node.worldPosition, Vector3.new(4, 1, 4), BrickColor.Black())
-            end
-        end
-    else
-        if grid then
-            for _, yAxis in ipairs(grid) do
-                for _, node in ipairs(yAxis) do
-                    if path then
-                        if table.find(path, node) then
-                            drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.Black() or BrickColor.Red())
-                        else
-                            drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
-                        end
-                    else
-                        drawParts(node.worldPosition, Vector3.new(4, 1, 4), node.walkable and BrickColor.White() or BrickColor.Red())
-                    end
-                end
-            end
-        end
-    end
+    return self.grid[x][y]
 end
 
 return gridClass

@@ -4,13 +4,8 @@
 -- Author: Alex/EnDarke
 -- Date: 07/24/22
 
-local parent = script.Parent
-
---\\ Variables //--
-local heapIndex
-
 --\\ Module Code //--
-local Node = {}
+local Node: {} = {}
 Node.__index = Node
 
 function Node.new(_walkable, _worldPos, _gridX, _gridY)
@@ -33,7 +28,7 @@ function Node:fCost()
 end
 
 function Node:compareTo(nodeToCompare)
-    local compare = self:fCost() == nodeToCompare.fCost and true or false
+    local compare: boolean = self:fCost() == nodeToCompare.fCost and true or false
     if compare then
         compare = self.hCost == nodeToCompare.hCost and true or false
     end
